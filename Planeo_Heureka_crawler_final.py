@@ -1,25 +1,25 @@
 import pprint
-import random
-import requests
-import urllib.request
-from selenium import webdriver
 import time
-from bs4 import BeautifulSoup
-from selenium import webdriver  
-from selenium.common.exceptions import NoSuchElementException  
-from selenium.webdriver.common.keys import Keys  
-from bs4 import BeautifulSoup
 import pandas as pd
 import pyodbc
-import sqlalchemy
-import pandas as pd
-from datetime import datetime
 import win32com.client
+import os
+import win32com.client as win32
+from datetime import datetime, timedelta
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium import webdriver
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.keys import Keys 
+from datetime import datetime
 from collections import Counter
 from datetime import date
-import os
-import math
 
+
+pp = pprint.PrettyPrinter(indent=4)
 ########################################################################################################################################
 ###Browser opening and options ######
 browser = webdriver.Chrome(r'C:\Users\roboz.DESKTOP-F86F289\Desktop\chromedrive\chromedriver.exe') 
@@ -34,10 +34,8 @@ time.sleep(2)
 e = browser.find_element("id", "CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll")
 e.click()
 df = pd.DataFrame(columns = ["id","Popis","Nazov","cena","bezna_cena","link"])
-
 html_source = browser.page_source  
 soup = BeautifulSoup(html_source,'html.parser')
-
 all_links = []
 count = 0
 today = date.today()
@@ -78,7 +76,6 @@ for x in all_links:
             price = price[0:price.find('€')].replace('\n','').replace('\xa0','').replace('€Cena s DPH','').replace(',','.')
         else:
             price = ""
-        
         try:
             pokus_main = soup.find_all('div', {'class' : 'stamp-icon no-price custom-stamp'})[0]
             price_2 = str(pokus_main)[str(pokus_main).find('_AKCNACENA')+1:str(pokus_main).find('png')-1]
@@ -105,7 +102,6 @@ for x in all_links:
                 bezna_cena = bezna_cena[0:price.find('€')].replace('\n','').replace('\xa0','').replace('€Cena s DPH','').replace(',','.')
         except:
             pass
-        
         try:
             if float(price_3) > 0:
                 price = price_3
@@ -113,11 +109,8 @@ for x in all_links:
                 bezna_cena = bezna_cena[0:price.find('€')].replace('\n','').replace('\xa0','').replace('€Cena s DPH','').replace(',','.')
         except:
             pass
-
         name_1 = soup.find_all('span', {'class' : 'type'})[1].get_text()
-        name_2 = soup.find_all('h1')[0].get_text().replace('\n','').replace('\t','')
-        
-                      
+        name_2 = soup.find_all('h1')[0].get_text().replace('\n','').replace('\t','')            
         dictionary = {"id" : id_,"Popis":name_1,"Nazov":name_2,"cena" : price ,"bezna_cena" :bezna_cena, "link" : url}
         df = df.append(dictionary, ignore_index=True, sort=False)
     except:
@@ -134,10 +127,6 @@ df['zlava'] = round((df['cena'] / df['bezna_cena']) - 1,2)
 df = df.sort_values(by='zlava', ascending=True, na_position='last')
 df['Date'] = [today] * len(df['zlava'])
 df = df.fillna(value=0)
-
-
-
-
 conn = pyodbc.connect(
 "Driver={SQL Server};"
 "Server=DESKTOP-F86F289;"
@@ -151,7 +140,6 @@ cursor.execute('''
                ''')
 
 conn.commit()
-
 
 for row in df.itertuples():
     cursor.execute('''
@@ -169,7 +157,6 @@ for row in df.itertuples():
         )
 conn.commit()
 
-
 str(today)
 df.to_excel(r'C:\Users\roboz.DESKTOP-F86F289\Desktop\Planeo\Planeo_' + str(today) +'.xlsx')
 time.sleep(10)
@@ -183,20 +170,14 @@ df = df.reset_index(drop=True)
 df.drop(['Unnamed: 0', 'id','Date'], axis=1,inplace=True )
 df.rename(columns={"zlava": "zlava_in_perc"}, inplace=True)
 df['zlava_in_perc'] = round(df['zlava_in_perc']*100)
-
-
-
 html1 = df.head(20).to_html()
 os.startfile("outlook")
 ol = win32com.client.Dispatch('Outlook.Application')
 olmailitem = 0x0
 newmail = ol.CreateItem(olmailitem)
 list_of_email = ['zrubanrobert@gmail.com']
-
 # Function to get unique values
 receiver = 'zrubanrobert@gmail.com'
-#cc = 'puskjana@gmail.com'
-
 newmail.Subject = f'Planeo Zlavy: {today}' 
 newmail.To = receiver
 #newmail.CC = cc
@@ -206,39 +187,6 @@ newmail.Attachments.Add(Source=r'C:\Users\roboz.DESKTOP-F86F289\Desktop\Planeo\P
 newmail.Display()
 newmail.Send()
 
-#for x in range(0 ,10):
-     #jebo = (x," : ",  df['Popis'][x], ':' , {df['Nazov'][x]}, ' je zlacnený o ', round(df['zlava'][x]*100,3),'%' , 'z pôvodnej ceny', df['bezna_cena'][x], 'eur', ' na ', df['cena'][x],'eur','. Link na tento produkt je ',  {df['link'][x]} ) 
-     #jebo = str(jebo)
-     #jebo = jebo.replace(',','').replace("'",'').replace("(",'').replace(")",'')
-     #mail.append(jebo)
-    #jebo = (df['Popis'][x], ' so znacenim ' , df['Nazov'][x], ' je zlacneny o ', round(df['zlava'][x]*100,3),'%' , 'z beznej ceny', df['bezna_cena'][x], 'eur', ' na cenu ', df['cena'][x],'eur',' Link na tento produkt je ',  df['link'][x] )
-    #mail.append(jebo)
-    #print({df['Popis'][x]}, ' so znacenim ' , {df['Nazov'][x]}, ' je zlacneny o ', round(df['zlava'][x]*100,3),'%' , 'z beznej ceny', {df['bezna_cena'][x]}, 'eur', ' na cenu ', {df['cena'][x]},'eur',' Link na tento produkt je ',  {df['link'][x] })
-#[print({df['Popis'][x]}, ' so znacenim ' , {df['Nazov'][x]}, ' je zlacneny o ', round(df['zlava'][x]*100,3),'%' , 'z beznej ceny', {df['bezna_cena'][x]}, 'eur', ' na cenu ', {df['cena'][x]},'eur',' Link na tento produkt je ',  {df['link'][x] }, '\n') for x in range(0 ,10) ]   
-#final_text = "Posielam najviac zlacnené produkty na dnes zo stránky www.Planeo.sk \n\n" + mail[0] + "\n" + mail[1] + "\n" + mail[2] + "\n" + mail[3] + "\n" + mail[4] + "\n" + mail[5]+  "\n"  + mail[6] + "\n" + mail[7] + "\n"  + mail[8] + "\n" + mail[9] 
-
-#####Imports######
-import pprint
-import random
-import requests
-import urllib.request
-from selenium import webdriver
-import time
-from bs4 import BeautifulSoup
-from selenium import webdriver  
-from selenium.common.exceptions import NoSuchElementException  
-from selenium.webdriver.common.keys import Keys  
-from bs4 import BeautifulSoup
-import pandas as pd
-import pyodbc
-import sqlalchemy
-import pandas as pd
-from datetime import datetime
-import win32com.client
-from collections import Counter
-from datetime import date
-import win32com.client as win32
-from datetime import datetime, timedelta
 conn = pyodbc.connect(
 "Driver={SQL Server};"
 "Server=DESKTOP-F86F289;"
@@ -284,27 +232,6 @@ mail.HTMLBody = html1
 mail.Display()
 mail.Send()
 
-#cc = 'puskjana@gmail.com'
-
-from datetime import datetime
-from selenium.common.exceptions import TimeoutException
-from selenium import webdriver  
-from selenium.common.exceptions import NoSuchElementException  
-from selenium.webdriver.common.keys import Keys  
-from bs4 import BeautifulSoup
-import pandas as pd
-import pprint
-pp = pprint.PrettyPrinter(indent=4)
-import random
-import requests
-import urllib.request
-import time
-from bs4 import BeautifulSoup
-import pyodbc
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.by import By
 conn = pyodbc.connect(
 "Driver={SQL Server};"
 "Server=DESKTOP-F86F289;"
@@ -363,53 +290,6 @@ for row in df.itertuples():
         row.price
         )
 conn.commit()
-
-#####Imports######
-import pprint
-import random
-import requests
-import urllib.request
-from selenium import webdriver
-import time
-from bs4 import BeautifulSoup
-from selenium import webdriver  
-from selenium.common.exceptions import NoSuchElementException  
-from selenium.webdriver.common.keys import Keys  
-from bs4 import BeautifulSoup
-import pandas as pd
-import pyodbc
-import sqlalchemy
-import pandas as pd
-from datetime import datetime
-import win32com.client
-from collections import Counter
-from datetime import date
-import pprint
-import random
-import requests
-import urllib.request
-from selenium import webdriver
-import time
-from bs4 import BeautifulSoup
-from selenium import webdriver  
-from selenium.common.exceptions import NoSuchElementException  
-from selenium.webdriver.common.keys import Keys  
-from bs4 import BeautifulSoup
-import pandas as pd
-import pyodbc
-import sqlalchemy
-import pandas as pd
-from datetime import datetime
-import win32com.client
-from collections import Counter
-from datetime import date
-import os
-import math
-from datetime import datetime, timedelta
-
-
-import win32com.client as win32
-
 conn = pyodbc.connect(
 "Driver={SQL Server};"
 "Server=DESKTOP-F86F289;"
@@ -417,7 +297,6 @@ conn = pyodbc.connect(
 "Trusted_Connection=yes;")
 
 today = date.today()
-
 df = pd.DataFrame()
 df = pd.read_sql("SELECT a.popis,a.Nazov, b.item_name_downloaded, a.cena,b.price, b.alts from (SELECT * FROM Planeo.dbo.Planeo WHERE Date in (SELECT Convert(DateTime, DATEDIFF(DAY, 0, GETDATE())))) as a inner Join Planeo.dbo.Heureka as b on a.Nazov = b.item_name",conn)
 df = df[df['item_name_downloaded'].isin(list(df[df['alts'] == 'planeo.sk']['item_name_downloaded'].unique()))]
