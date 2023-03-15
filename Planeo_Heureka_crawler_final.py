@@ -19,6 +19,7 @@ from collections import Counter
 from datetime import date
 
 
+
 pp = pprint.PrettyPrinter(indent=4)
 ########################################################################################################################################
 ###Browser opening and options ######
@@ -296,6 +297,7 @@ conn = pyodbc.connect(
 "Database =Planeo;"
 "Trusted_Connection=yes;")
 
+from datetime import date
 today = date.today()
 df = pd.DataFrame()
 df = pd.read_sql("SELECT a.popis,a.Nazov, b.item_name_downloaded, a.cena,b.price, b.alts from (SELECT * FROM Planeo.dbo.Planeo WHERE Date in (SELECT Convert(DateTime, DATEDIFF(DAY, 0, GETDATE())))) as a inner Join Planeo.dbo.Heureka as b on a.Nazov = b.item_name",conn)
